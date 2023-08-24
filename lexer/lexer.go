@@ -8,28 +8,34 @@ import (
 	"fmt"
 )
 
-func Parse(fn string) (*Node, error) {
+func Parse(fn string) (Node, error) {
 	b, err := os.ReadFile(fn)
 	l := 1
 	if err != nil {
 		return nil, err
 	}
 
-	body := Node {
+	body := HTMLElement {
 		Name: "body",
 	}
 
 	for i := 0; i < len(b); i++ {
 		if r, s := isNewline(b, i); r {
 			i += s
-			l++;
-		} else if b[i] != '<' {
+			l++
 			continue
+		} else if b[i] == ' ' || b[i] == '\t' {
+			continue
+		} else if b[i] != '<' {
+			return nil, errors.New(fmt.Sprintf("Syntax error in file %s at line %d (char %d). Expected an element.", fn, l, i))
 		}
-		if bytes.Equal(b[i:i+4], []byte("<!--")) {
+
+		if i+4 < len(b) && bytes.Equal(b[i:i+4], []byte("<!--")) {
 			i, l = skipComment(b, i+4, l)
+		} else if i+8 < len(b) && bytes.Equal(b[i:i+8], []byte("<script>")){
+			i, l = parseJs(b, i+8, l)
 		} else {
-			return nil, errors.New(fmt.Sprintf("Syntax error in file %s at line %d (char %d)", fn, l, i))
+			return nil, errors.New(fmt.Sprintf("Unknown element in file %s at line %d (char %d).", fn, l, i))
 		}
 	}
 
@@ -48,6 +54,7 @@ func skipComment(b []byte, i, l int) (n_i, n_l int) {
 	}
 	return i, l
 }
+
 
 func isNewline(b []byte, i int) (r bool, s int){
 	if b[i] == '\r' {
