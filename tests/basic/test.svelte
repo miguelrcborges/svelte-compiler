@@ -4,3 +4,4 @@
 <script>
 	let a = 5;
 </script>
+<h1>'a' is currently {a}</a>
